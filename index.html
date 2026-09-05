@@ -306,32 +306,6 @@
     padding:9px 18px; border-radius:3px; cursor:pointer; font-size:13.5px;
   }
 
-  /* ---------- submit success popup (modal) ---------- */
-  .modal-overlay{
-    position:fixed; inset:0; z-index:200; background:rgba(18,24,28,0.7);
-    display:none; align-items:center; justify-content:center; padding:24px;
-    opacity:0; transition:opacity .25s ease;
-  }
-  .modal-overlay.show{ display:flex; }
-  .modal-overlay.in{ opacity:1; }
-  .modal-card{
-    background:var(--ink2); border:1px solid var(--line); border-radius:6px;
-    padding:40px 34px; max-width:400px; width:100%; text-align:center;
-    transform:translateY(14px); transition:transform .25s ease;
-  }
-  .modal-overlay.in .modal-card{ transform:translateY(0); }
-  .modal-card .circle{
-    width:52px; height:52px; border-radius:50%; border:2px solid var(--rust); margin:0 auto 18px;
-    display:flex; align-items:center; justify-content:center;
-  }
-  .modal-card h4{ font-size:1.2rem; margin-bottom:10px; font-weight:500; font-family:var(--serif); }
-  .modal-card p{ color:var(--paper-dim); font-size:.95rem; line-height:1.55; }
-  .modal-card button{
-    margin-top:22px; background:var(--rust); border:none; color:var(--ink);
-    padding:11px 22px; border-radius:3px; cursor:pointer; font-size:13.5px; font-weight:600;
-  }
-  .modal-card button:hover{ background:var(--rust-soft); }
-
   /* ---------- CTA banner ---------- */
   .cta-banner{
     border:1px solid var(--line); padding:56px 44px; text-align:center; margin:100px 0;
@@ -771,15 +745,6 @@
   </div>
 </footer>
 
-<div class="modal-overlay" id="submitModal">
-  <div class="modal-card">
-    <div class="circle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--rust)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></div>
-    <h4 id="submitModalTitle">Thank you</h4>
-    <p id="submitModalText"></p>
-    <button id="submitModalClose">Close</button>
-  </div>
-</div>
-
 <div class="totop" id="totop">
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ECE7DA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
 </div>
@@ -857,64 +822,32 @@ document.querySelectorAll('.tab').forEach(tab => {
   });
 });
 
-/* Form submission via FormSubmit AJAX */
-const DEST_EMAIL = "humanexglobal@gmail.com";
+/* Form submission via WhatsApp deep link */
+const WHATSAPP_NUMBER = "2349129176929";
 function resetForm(kind){ document.getElementById(kind+'Success').classList.remove('show'); document.getElementById(kind+'Form').reset(); }
 
-/* Popup modal shown after a successful submission */
-const submitModal = document.getElementById('submitModal');
-const submitModalTitle = document.getElementById('submitModalTitle');
-const submitModalText = document.getElementById('submitModalText');
-function openSubmitModal(title, text){
-  submitModalTitle.textContent = title;
-  submitModalText.textContent = text;
-  submitModal.classList.add('show');
-  requestAnimationFrame(() => submitModal.classList.add('in'));
-}
-function closeSubmitModal(){
-  submitModal.classList.remove('in');
-  setTimeout(() => submitModal.classList.remove('show'), 250);
-}
-document.getElementById('submitModalClose').addEventListener('click', closeSubmitModal);
-submitModal.addEventListener('click', (e) => { if(e.target === submitModal) closeSubmitModal(); });
+const FIELD_LABELS = {
+  name: 'Full name', email: 'Email', country: 'Country', lab: 'Preferred lab',
+  background: 'Background / expertise', message: 'Message',
+  organisation: 'Organisation', org_type: 'Organisation type', partner_type: 'How they want to partner'
+};
 
-function wireForm(formId, statusId, successId, subject, modalTitle, modalText){
+function wireForm(formId, successId, heading){
   const form = document.getElementById(formId);
   if(!form) return;
-  form.addEventListener('submit', async (e) => {
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
-    const btn = form.querySelector('.submit-btn');
-    const status = document.getElementById(statusId);
-    btn.classList.add('loading'); btn.disabled = true;
-    status.textContent = ''; status.className = 'form-status';
     const data = new FormData(form);
-    const payload = {};
-    data.forEach((v,k) => payload[k] = v);
-    payload['_subject'] = subject;
-    try{
-      const res = await fetch(`https://formsubmit.co/ajax/${DEST_EMAIL}`, {
-        method: 'POST', headers: { 'Content-Type':'application/json', 'Accept':'application/json' }, body: JSON.stringify(payload)
-      });
-      if(!res.ok) throw new Error('bad response');
-      document.getElementById(successId).classList.add('show');
-      form.reset();
-      openSubmitModal(modalTitle, modalText);
-    }catch(err){
-      status.textContent = "Something went wrong sending your message. Please try again, or email us directly.";
-      status.className = 'form-status err';
-    }finally{ btn.classList.remove('loading'); btn.disabled = false; }
+    let lines = [heading, ''];
+    data.forEach((v,k) => { lines.push(`${FIELD_LABELS[k] || k}: ${v}`); });
+    const text = encodeURIComponent(lines.join('\n'));
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${text}`, '_blank');
+    document.getElementById(successId).classList.add('show');
+    form.reset();
   });
 }
-wireForm(
-  'volunteerForm','volunteerStatus','volunteerSuccess','New HUMANEX volunteer application',
-  'Thanks for volunteering!',
-  "We've received your application. The HUMANEX founding team will reach out to your email as soon as possible."
-);
-wireForm(
-  'partnerForm','partnerStatus','partnerSuccess','New HUMANEX partnership inquiry',
-  'Thanks for reaching out!',
-  "We've received your partnership inquiry. Our team will reach out to you as soon as possible."
-);
+wireForm('volunteerForm', 'volunteerSuccess', 'New HUMANEX volunteer application');
+wireForm('partnerForm', 'partnerSuccess', 'New HUMANEX partnership inquiry');
 
 } catch (err) {
   console.error('HUMANEX site script error:', err);
